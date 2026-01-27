@@ -36,4 +36,33 @@ router.get('/', authMiddleware, async (req, res) => {
   }
 });
 
+// Admin: Get ALL bookings
+router.get('/all', require('../middleware/admin'), async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT bookings.*, users.name, users.email 
+      FROM bookings 
+      JOIN users ON bookings.user_id = users.id 
+      ORDER BY created_at DESC
+    `);
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Admin: Update Booking Status
+router.put('/status/:id', require('../middleware/admin'), async (req, res) => {
+  const { status } = req.body; // e.g., "Confirmed", "Delivered", "Cancelled"
+  try {
+    const result = await pool.query(
+      'UPDATE bookings SET status = $1 WHERE id = $2 RETURNING *',
+      [status, req.params.id]
+    );
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
