@@ -14,6 +14,19 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Public: Get Single Item by ID (NEW)
+router.get('/:id', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM inventory WHERE id = $1', [req.params.id]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Item not found' });
+    }
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Admin: Add new item
 router.post('/', adminMiddleware, async (req, res) => {
   const { name, description, price, image_url, category } = req.body;

@@ -168,47 +168,34 @@ export default function AdminDashboard() {
       </Box>
 
       {/* TAB 1: BOOKINGS */}
-      <TabPanel value={tabValue} index={0}>
-        <TableContainer component={Paper} sx={{ mt: 2 }}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>ID</TableCell>
-                <TableCell>Customer</TableCell>
-                <TableCell>Date</TableCell>
-                <TableCell>Location</TableCell>
-                <TableCell>Total</TableCell>
-                <TableCell>Status</TableCell>
+            <TableContainer component={Paper} sx={{ mt: 2, overflowX: 'auto' }}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell sx={{ display: { xs: 'none', md: 'table-cell' }}}>Preview</TableCell> {/* Hide image on mobile */}
+              <TableCell>Name</TableCell>
+              <TableCell sx={{ display: { xs: 'none', md: 'table-cell' }}}>Category</TableCell> {/* Hide category on mobile */}
+              <TableCell>Price</TableCell>
+              <TableCell sx={{ display: { xs: 'none', md: 'table-cell' }}}>Actions</TableCell> {/* Hide actions on mobile */}
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {inventory.map(item => (
+              <TableRow key={item.id}>
+                <TableCell sx={{ display: { xs: 'none', md: 'table-cell' }}}>
+                   <Box component="img" src={item.image_url} alt={item.name} sx={{ height: 50, width: 50, objectFit: 'cover' }} />
+                </TableCell>
+                <TableCell>{item.name}</TableCell>
+                <TableCell sx={{ display: { xs: 'none', md: 'table-cell' }}}>{item.category}</TableCell>
+                <TableCell>R{item.price}</TableCell>
+                <TableCell>
+                  <Button color="error" size="small" onClick={() => handleDeleteItem(item.id)}>Delete</Button>
+                </TableCell>
               </TableRow>
-            </TableHead>
-            <TableBody>
-              {bookings.map(b => (
-                <TableRow key={b.id}>
-                  <TableCell>#{b.id}</TableCell>
-                  <TableCell>{b.name} ({b.email})</TableCell>
-                  <TableCell>{new Date(b.event_date).toLocaleDateString()}</TableCell>
-                  <TableCell>{b.location}</TableCell>
-                  <TableCell>R{b.total_price}</TableCell>
-                  <TableCell>
-                    <FormControl size="small">
-                      <Select
-                        value={b.status}
-                        onChange={(e) => handleStatusChange(b.id, e.target.value)}
-                        sx={{ minWidth: 100 }}
-                      >
-                        <MenuItem value="Pending">Pending</MenuItem>
-                        <MenuItem value="Confirmed">Confirmed</MenuItem>
-                        <MenuItem value="Delivered">Delivered</MenuItem>
-                        <MenuItem value="Cancelled">Cancelled</MenuItem>
-                      </Select>
-                    </FormControl>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </TabPanel>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
 
       {/* TAB 2: INVENTORY */}
       <TabPanel value={tabValue} index={1}>

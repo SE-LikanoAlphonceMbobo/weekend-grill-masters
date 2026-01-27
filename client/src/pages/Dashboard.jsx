@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState } from 'react';
-import { Typography, Button, Container, Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, CircularProgress } from '@mui/material';
+import { Typography, Button, Container, Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, CircularProgress, useMediaQuery, useTheme } from '@mui/material';
 import { AuthContext } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -9,6 +9,8 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm')); // Mobile if screen < 600px
 
   // Fetch bookings when component loads
   useEffect(() => {
@@ -51,11 +53,13 @@ export default function Dashboard() {
           <Button variant="contained" sx={{ mt: 2 }} onClick={() => navigate('/')}>Browse Rentals</Button>
         </Paper>
       ) : (
-        <TableContainer component={Paper}>
-          <Table sx={{ minWidth: 650 }} aria-label="simple table">
+        <TableContainer component={Paper} sx={{ overflowX: 'auto', maxWidth: '100%' }}>
+          {/* overflowX: 'auto' allows scrolling on mobile if text is long */}
+          <Table sx={{ minWidth: 600 }}> {/* minWidth forces scroll on small screens */}
             <TableHead>
               <TableRow>
-                <TableCell>Booking ID</TableCell>
+                {/* HIDE ID ON MOBILE */}
+                <TableCell sx={{ display: isMobile ? 'none' : 'table-cell' }}>Booking ID</TableCell>
                 <TableCell>Event Date</TableCell>
                 <TableCell>Location</TableCell>
                 <TableCell>Total</TableCell>
@@ -65,14 +69,18 @@ export default function Dashboard() {
             <TableBody>
               {bookings.map((booking) => (
                 <TableRow key={booking.id} sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
-                  <TableCell component="th" scope="row">#{booking.id}</TableCell>
+                  <TableCell sx={{ display: isMobile ? 'none' : 'table-cell' }}>#{booking.id}</TableCell>
                   <TableCell>{new Date(booking.event_date).toLocaleDateString()}</TableCell>
                   <TableCell>{booking.location}</TableCell>
                   <TableCell>R{booking.total_price}</TableCell>
                   <TableCell>
                     <span style={{ 
                         color: booking.status === 'Confirmed' ? 'green' : 'orange',
-                        fontWeight: 'bold' 
+                        fontWeight: 'bold',
+                        padding: '4px 8px',
+                        borderRadius: '4px',
+                        backgroundColor: booking.status === 'Confirmed' ? '#e8f5e9' : '#fff3e0',
+                        fontSize: '0.8rem' // Smaller font for mobile
                       }}>
                       {booking.status}
                     </span>

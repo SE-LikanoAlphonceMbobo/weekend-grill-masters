@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Container, Typography, Button, TextField, Box, Paper, CircularProgress, Alert } from '@mui/material';
 import axios from 'axios';
@@ -6,23 +6,42 @@ import axios from 'axios';
 export default function BookingForm() {
   const { itemId } = useParams();
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
+  // State variables
+  const [loading, setLoading] = useState(true); 
+  const [submitting, setSubmitting] = useState(false); 
   const [msg, setMsg] = useState('');
+  const [price, setPrice] = useState(0); 
+  const [today, setToday] = useState(''); 
 
-  // Find price from inventory based on ID (Simple lookup)
-  // In a real app, you might fetch item details first
-  const itemPrices = { '1': 450, '2': 800 }; // Map ID to Price from Inventory Data
-  const price = itemPrices[itemId] || 0; 
+  // 1. FETCH ITEM DETAILS ON LOAD
+  useEffect(() => {
+    const fetchItem = async () => {
+      try {
+        const res = await axios.get(`http://localhost:5000/api/inventory/${itemId}`);
+        setPrice(res.data.price);
+        setLoading(false);
+      } catch (err) {
+        setMsg('Failed to load item details.');
+        setLoading(false);
+      }
+    };
+    fetchItem();
+
+    // Set today's date
+    const currentDate = new Date().toLocaleDateString('en-CA');
+    setToday(currentDate);
+  }, [itemId]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
+    setSubmitting(true);
+    
     const formData = new FormData(e.target);
     
     const bookingData = {
       event_date: formData.get('date'),
       location: formData.get('location'),
-      total_price: price
+      total_price: price 
     };
 
     const token = localStorage.getItem('token');
@@ -40,9 +59,17 @@ export default function BookingForm() {
       console.error(err);
       setMsg('Error booking item.');
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
+
+  if (loading) {
+    return (
+      <Container maxWidth="sm" sx={{ mt: 4, display: 'flex', justifyContent: 'center' }}>
+        <CircularProgress />
+      </Container>
+    );
+  }
 
   return (
     <Container maxWidth="sm" sx={{ mt: 4 }}>
@@ -51,27 +78,39 @@ export default function BookingForm() {
         {msg && <Alert severity={msg.includes('Error') ? 'error' : 'success'} sx={{ mb: 2 }}>{msg}</Alert>}
         
         <form onSubmit={handleSubmit}>
+          
+          {/* DATE: Separate Label */}
+          <Typography variant="body1" gutterBottom>Event Date</Typography>
           <TextField 
             fullWidth 
-            label="Event Date" 
             name="date"
             type="date" 
-            InputLabelProps={{ shrink: true }} 
-            sx={{ mb: 2 }} 
+            inputProps={{ min: today }}
+            sx={{ mb: 4 }} 
             required 
           />
+
+          {/* LOCATION: Separate Label */}
+          <Typography variant="body1" gutterBottom>Location</Typography>
           <TextField 
             fullWidth 
-            label="Location" 
             name="location"
-            sx={{ mb: 2 }} 
+            sx={{ mb: 4 }} 
             required 
           />
-          <Typography variant="body1" sx={{ mb: 2 }}>
+          
+          <Typography variant="h6" sx={{ mb: 2, color: 'primary' }}>
             Total Cost: <strong>R{price}</strong>
           </Typography>
-          <Button fullWidth variant="contained" type="submit" disabled={loading}>
-            {loading ? <CircularProgress size={24} /> : 'Confirm Booking'}
+          
+          <Button 
+            fullWidth 
+            variant="contained" 
+            type="submit" 
+            disabled={submitting}
+            sx={{ mt: 2 }}
+          >
+            {submitting ? 'Booking...' : 'Confirm Booking'}
           </Button>
         </form>
       </Paper>
