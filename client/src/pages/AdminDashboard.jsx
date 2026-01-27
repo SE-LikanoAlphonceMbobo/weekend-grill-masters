@@ -22,10 +22,14 @@ import {
   Select, 
   InputLabel, 
   FormControl,
-  CircularProgress
+  CircularProgress,
+  IconButton,
+  useMediaQuery,
+  useTheme
 } from '@mui/material';
 import axios from 'axios';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import DeleteIcon from '@mui/icons-material/Delete';
 
 // CONFIGURATION: Update these with your Cloudinary details
 const CLOUD_NAME = 'djejaplo5'; 
@@ -42,13 +46,14 @@ export default function AdminDashboard() {
   const [inventory, setInventory] = useState([]);
   const [openAddItem, setOpenAddItem] = useState(false);
   const [loading, setLoading] = useState(false);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm')); // Mobile if < 600px
   
-  // Update state to handle File object instead of just URL string
   const [newItem, setNewItem] = useState({ 
     name: '', 
     description: '', 
     price: '', 
-    imageFile: null, // Stores the selected File
+    imageFile: null, 
     category: 'Grill' 
   });
 
@@ -78,7 +83,6 @@ export default function AdminDashboard() {
     }
   };
 
-  // NEW FUNCTION: Handle Cloudinary Upload
   const uploadToCloudinary = async (file) => {
     const data = new FormData();
     data.append("file", file);
@@ -87,7 +91,7 @@ export default function AdminDashboard() {
 
     try {
       const res = await axios.post(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, data);
-      return res.data.secure_url; // Returns the URL
+      return res.data.secure_url;
     } catch (err) {
       console.error("Cloudinary Error:", err);
       alert("Failed to upload image to cloud. Check console.");
@@ -100,28 +104,25 @@ export default function AdminDashboard() {
     
     setLoading(true);
     
-    let imageUrl = 'https://picsum.photos/400/300'; // Default image if no file selected
+    let imageUrl = 'https://picsum.photos/400/300'; 
 
-    // 1. Upload Image to Cloudinary if a file was selected
     if (newItem.imageFile) {
       const uploadedUrl = await uploadToCloudinary(newItem.imageFile);
       if (uploadedUrl) imageUrl = uploadedUrl;
     }
 
-    // 2. Send Data to Database (using the Cloudinary URL)
     const token = localStorage.getItem('token');
     try {
       await axios.post('http://localhost:5000/api/inventory', {
         name: newItem.name,
         description: newItem.description,
         price: newItem.price,
-        image_url: imageUrl, // Send the URL
+        image_url: imageUrl,
         category: newItem.category
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setOpenAddItem(false);
-      // Reset Form
       setNewItem({ name: '', description: '', price: '', imageFile: null, category: 'Grill' });
       fetchInventory();
     } catch (err) {
@@ -168,47 +169,61 @@ export default function AdminDashboard() {
       </Box>
 
       {/* TAB 1: BOOKINGS */}
-            <TableContainer component={Paper} sx={{ mt: 2, overflowX: 'auto' }}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell sx={{ display: { xs: 'none', md: 'table-cell' }}}>Preview</TableCell> {/* Hide image on mobile */}
-              <TableCell>Name</TableCell>
-              <TableCell sx={{ display: { xs: 'none', md: 'table-cell' }}}>Category</TableCell> {/* Hide category on mobile */}
-              <TableCell>Price</TableCell>
-              <TableCell sx={{ display: { xs: 'none', md: 'table-cell' }}}>Actions</TableCell> {/* Hide actions on mobile */}
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {inventory.map(item => (
-              <TableRow key={item.id}>
-                <TableCell sx={{ display: { xs: 'none', md: 'table-cell' }}}>
-                   <Box component="img" src={item.image_url} alt={item.name} sx={{ height: 50, width: 50, objectFit: 'cover' }} />
-                </TableCell>
-                <TableCell>{item.name}</TableCell>
-                <TableCell sx={{ display: { xs: 'none', md: 'table-cell' }}}>{item.category}</TableCell>
-                <TableCell>R{item.price}</TableCell>
-                <TableCell>
-                  <Button color="error" size="small" onClick={() => handleDeleteItem(item.id)}>Delete</Button>
-                </TableCell>
+      <TabPanel value={tabValue} index={0}>
+        <TableContainer component={Paper} sx={{ mt: 2, overflowX: 'auto' }}>
+          <Table sx={{ minWidth: 600 }}>
+            <TableHead>
+              <TableRow>
+                <TableCell sx={{ display: { xs: 'none', md: 'table-cell' }}}>ID</TableCell>
+                <TableCell>Customer</TableCell>
+                <TableCell>Date</TableCell>
+                <TableCell>Location</TableCell>
+                <TableCell>Total</TableCell>
+                <TableCell>Status</TableCell>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+            </TableHead>
+            <TableBody>
+              {bookings.map(b => (
+                <TableRow key={b.id}>
+                  <TableCell sx={{ display: { xs: 'none', md: 'table-cell' }}}>#{b.id}</TableCell>
+                  <TableCell>{b.name}</TableCell>
+                  <TableCell>{new Date(b.event_date).toLocaleDateString()}</TableCell>
+                  <TableCell sx={{ maxWidth: 150, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {b.location}
+                  </TableCell>
+                  <TableCell>R{b.total_price}</TableCell>
+                  <TableCell>
+                    <FormControl size="small" sx={{ minWidth: 100 }}>
+                      <Select
+                        value={b.status}
+                        onChange={(e) => handleStatusChange(b.id, e.target.value)}
+                      >
+                        <MenuItem value="Pending">Pending</MenuItem>
+                        <MenuItem value="Confirmed">Confirmed</MenuItem>
+                        <MenuItem value="Delivered">Delivered</MenuItem>
+                        <MenuItem value="Cancelled">Cancelled</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </TabPanel>
 
       {/* TAB 2: INVENTORY */}
       <TabPanel value={tabValue} index={1}>
         <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
           <Button variant="contained" onClick={() => setOpenAddItem(true)}>Add New Item</Button>
         </Box>
-        <TableContainer component={Paper}>
-          <Table>
+        <TableContainer component={Paper} sx={{ overflowX: 'auto' }}>
+          <Table sx={{ minWidth: 600 }}>
             <TableHead>
               <TableRow>
-                <TableCell>Preview</TableCell>
+                <TableCell sx={{ display: { xs: 'none', md: 'table-cell' }}}>Preview</TableCell>
                 <TableCell>Name</TableCell>
-                <TableCell>Category</TableCell>
+                <TableCell sx={{ display: { xs: 'none', md: 'table-cell' }}}>Category</TableCell>
                 <TableCell>Price</TableCell>
                 <TableCell>Actions</TableCell>
               </TableRow>
@@ -216,14 +231,21 @@ export default function AdminDashboard() {
             <TableBody>
               {inventory.map(item => (
                 <TableRow key={item.id}>
-                  <TableCell>
+                  <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
                      <Box component="img" src={item.image_url} alt={item.name} sx={{ height: 50, width: 50, objectFit: 'cover' }} />
                   </TableCell>
                   <TableCell>{item.name}</TableCell>
-                  <TableCell>{item.category}</TableCell>
+                  <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>{item.category}</TableCell>
                   <TableCell>R{item.price}</TableCell>
                   <TableCell>
-                    <Button color="error" size="small" onClick={() => handleDeleteItem(item.id)}>Delete</Button>
+                    {/* Responsive Action: Icon on Mobile, Button on Desktop */}
+                    {isMobile ? (
+                      <IconButton color="error" onClick={() => handleDeleteItem(item.id)}>
+                        <DeleteIcon />
+                      </IconButton>
+                    ) : (
+                      <Button color="error" size="small" onClick={() => handleDeleteItem(item.id)}>Delete</Button>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}
@@ -242,7 +264,6 @@ export default function AdminDashboard() {
             <TextField margin="dense" label="Price" type="number" fullWidth variant="standard" 
               value={newItem.price} onChange={e => setNewItem({...newItem, price: e.target.value})} />
             
-            {/* FILE INPUT BUTTON */}
             <Box sx={{ mt: 2, border: '1px dashed #ccc', p: 2, textAlign: 'center' }}>
               <input 
                 type="file" 
